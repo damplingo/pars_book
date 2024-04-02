@@ -62,7 +62,7 @@ int Search::position_start(int page) {
     
     for (auto& i: page_position) {
         if (i.first == page) {
-            return i.second;
+            return i.second;//положение каретки
         }
     }
 }
