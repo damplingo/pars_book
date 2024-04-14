@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cctype>
 #include <limits.h>
+#include <locale>
+#include <codecvt>
 
 bool isUint(const std::string& s){
     return s.find_first_not_of("\n0123456789 ") == std::string::npos;//пробел тк цифры все с пробелом хранятся
@@ -19,7 +21,7 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name)
         return;
     }
 
-    std::ofstream outf("out_2.txt");
+    //std::ofstream outf("out_2.txt");
     std::string input_str;
     int previous_page = 0;
     bool after_contents = false;
@@ -39,10 +41,10 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name)
     page_position = findLIS(page_position);
     auto it = page_position.begin();
     std::cout<<page_position.size()<<"\n";
-    while (it != page_position.end()) {
+    /*while (it != page_position.end()) {
         outf<<it->first<<" "<<it->second<<"\n";
         ++it;
-    }
+    }*/
 
 }
 
@@ -91,8 +93,9 @@ int Search::find_title(const std::string& title) {//вернет позицию 
     std::string str_input;
     int result;
     int current_position = start;
-    std::ofstream out("out_stream.txt");
+    std::ofstream out("out_find_title.txt");
     int min_levenshtein = INT_MAX;
+    int before;
     while (std::getline(inf, str_input)) {
         std::string low_str(str_input);
         if (current_position >= end) break;
@@ -100,11 +103,16 @@ int Search::find_title(const std::string& title) {//вернет позицию 
         if (levenshtein(low_str, low_title) < min_levenshtein) {
             min_levenshtein = levenshtein(low_str, low_title);
             result = current_position;
-            out<<low_str<<" "<<title<<" "<<min_levenshtein<<"\n";
+            out<<str_input<<"\n";
+            //out<<low_str<<" "<<title<<" "<<min_levenshtein<<"\n";
         }
+        before = current_position;
         current_position = inf.tellg();
+        
 
     }
+    //std::getline(inf, str_input);
+    //out<<str_input<<"\n";
     return result;
 }
 
@@ -124,35 +132,40 @@ void Search::find_text(const std::string& name) {//продумать для п�
         std::string str_input;
         inf.seekg(start_position);
         std::getline(inf, str_input);
-        //inform<<str_input<<" first str\n";
-        while (std::getline(inf, str_input) && inf.tellg() < end_position) {
+        while (std::getline(inf, str_input) && inf.tellg() <= end_position) {
             outf<<str_input<<"\n";
             
-            /*if (!this_chapter.get_index().empty()) {
-                if (levenshtein(this_chapter.get_index() + name, str_input) <= 2) {
-                    write = true;
-                }
-            }
-            
-            if (levenshtein(name, str_input) <= 2) {
-                write = true;
-            }
-
-            if (levenshtein(next_chapter.get_title(), str_input) <= 2 &&
-            inf.tellg() >= end) {
-                write = false;
-                return;
-            }*/
-
-            /*if (write) {
-                outf<<str_input<<"\n";
-            }*/
         }
 
     }
+
     else std::cout<<"can not find\n";
     return;
 }
+
+
+void Search::add_tags_for_title(const std::string& out_file_name, const std::string& title) {// после тестирования передавать поток, а не имя
+    Chapter chapter = contents.find(title);
+
+    std::string begin_title = "@#b" + chapter.get_ordernum();
+    std::string end_title = "@#e" + chapter.get_ordernum();
+
+    int pos_b = find_title(title);
+    int pos_e = find_title(contents.get_next(chapter).get_title());
+    std::ofstream outf(out_file_name);
+    std::string str_input;
+    std::ifstream inf(file_name);
+    inf.seekg(pos_b);
+    outf<<begin_title<<'\n';
+    outf<<title<<'\n';
+    std::getline(inf, str_input);
+    while (std::getline(inf, str_input) && inf.tellg() <= pos_e) {
+            outf<<str_input<<"\n";
+        }
+    outf<<end_title;    
+
+}
+
 
 vp  findLIS(const vp & source) { //ищем наибольшую возрастающую подпоследовательность по номеру символа
     int n = source.size();
@@ -191,8 +204,10 @@ vp  findLIS(const vp & source) { //ищем наибольшую возраст�
 
 
 int levenshtein(std::string string_1, std::string string_2) { ///len(str_1)<len(str_2)
+
     std::string str_1(string_1);
     std::string str_2(string_2);
+
     if (str_1.size() > str_2.size()) {
         std::swap(str_1, str_2);
     }

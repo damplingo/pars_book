@@ -4,24 +4,18 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+#include <clocale>
 #include "search.h"
 #include "contents.h"
 
 
+
 int main() {
     
-    Search searsh("7110-1.txt", "7110.csv");
-    std::string a = "Объектная модель";
-    searsh.find_text(a);
-    /*std::transform(low_title.begin(), low_title.end(), low_title.begin(),
-    [](wchar_t c){ return std::towlower(c);});*/
-
-    /*std::wstring low_title;
-    std::wcin>>low_title;
-    for (wchar_t& ch : low_title) {
-        ch = std::towlower(ch);
-    }
-    outf<<low_title;*/
-
+    Search search("7110-1.txt", "7110.csv");
+    std::string a = "Поколения языков программирования";
+    //search.find_text(a);
+    search.add_tags_for_title("add_tag.txt", a);
+    //search.find_title(a);
     return 0;
 }
