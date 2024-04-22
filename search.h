@@ -19,8 +19,7 @@ class Search {
         bool exist_page(int page);
         int end_this_page(int page);
         int find_title(const std::string& title);
-        void add_tags_for_title(const std::string& out_file_name, const std::string& title);
-        //void add_tags(const std::string& out_file_name);
+        void add_tags_for_title(const std::string& title);
     private:
         vp page_position;
         const std::string& contents_name; 

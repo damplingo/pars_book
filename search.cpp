@@ -3,7 +3,9 @@
 #include <utility>
 #include <algorithm>
 #include <cctype>
+#include <iostream>
 #include <limits.h>
+#include <string>
 #include <locale>
 #include <codecvt>
 
@@ -21,7 +23,7 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name)
         return;
     }
 
-    //std::ofstream outf("out_2.txt");
+    std::ofstream outf("out_2.txt");
     std::string input_str;
     int previous_page = 0;
     bool after_contents = false;
@@ -40,13 +42,17 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name)
 
     page_position = findLIS(page_position);
     auto it = page_position.begin();
-    std::cout<<page_position.size()<<"\n";
-    /*while (it != page_position.end()) {
+    while (it != page_position.end()) {
         outf<<it->first<<" "<<it->second<<"\n";
         ++it;
-    }*/
+    }
 
 }
+
+bool isUint_w(const std::wstring& s){
+    return s.find_first_not_of(L"\n0123456789 ") == std::string::npos;//пробел тк цифры все с пробелом хранятся
+}
+
 
 bool Search::exist_page(int page) {
     for (auto& i: page_position) {
@@ -67,6 +73,7 @@ int Search::position_start(int page) {
             return i.second;//положение каретки
         }
     }
+    return 0;///***
 }
 
 int Search::end_this_page(int page) {
@@ -80,55 +87,44 @@ int Search::end_this_page(int page) {
 }
 
 int Search::find_title(const std::string& title) {//вернет позицию с которой начинается строка с заголовком
-
     std::ifstream inf(file_name);
     Chapter this_chapter = contents.find(title);
     int start = position_start(this_chapter.get_start());
+    
     int end = end_this_page(this_chapter.get_start());
     std::string low_title(title);
 
-    std::transform(low_title.begin(), low_title.end(), low_title.begin(), [](char c){ return std::tolower(c);});
 
     inf.seekg(start);
     std::string str_input;
     int result;
     int current_position = start;
-    std::ofstream out("out_find_title.txt");
     int min_levenshtein = INT_MAX;
-    int before;
     while (std::getline(inf, str_input)) {
         std::string low_str(str_input);
         if (current_position >= end) break;
-        std::transform(low_str.begin(), low_str.end(), low_str.begin(), [](char c){ return std::tolower(c);});
         if (levenshtein(low_str, low_title) < min_levenshtein) {
             min_levenshtein = levenshtein(low_str, low_title);
+    
             result = current_position;
-            out<<str_input<<"\n";
-            //out<<low_str<<" "<<title<<" "<<min_levenshtein<<"\n";
         }
-        before = current_position;
         current_position = inf.tellg();
         
 
     }
-    //std::getline(inf, str_input);
-    //out<<str_input<<"\n";
     return result;
 }
+
 
 void Search::find_text(const std::string& name) {//продумать для последней главы отдельно
     if (contents.exist(name)) {
         Chapter this_chapter = contents.find(name);
         std::ifstream inf(file_name);
         Chapter next_chapter = contents.get_next(this_chapter);
-        std::ofstream inform("inform.txt");
         int start_position = find_title(name);
         int end_position = find_title(next_chapter.get_title());
 
         std::ofstream outf("out_cont.txt");
-        inform<<this_chapter.get_title()<<" start_pos"<<start_position<<"\n";
-        inform<<next_chapter.get_title()<<" start_pos"<<end_position<<"\n";
-
         std::string str_input;
         inf.seekg(start_position);
         std::getline(inf, str_input);
@@ -144,23 +140,27 @@ void Search::find_text(const std::string& name) {//продумать для п�
 }
 
 
-void Search::add_tags_for_title(const std::string& out_file_name, const std::string& title) {// после тестирования передавать поток, а не имя
+void Search::add_tags_for_title(const std::string& title) {// после тестирования передавать поток, а не имя
     Chapter chapter = contents.find(title);
-
-    std::string begin_title = "@#b" + chapter.get_ordernum();
-    std::string end_title = "@#e" + chapter.get_ordernum();
+    std::string begin_title = "@#b" + std::to_string(chapter.get_ordernum());
+    std::string end_title = "@#e"+ std::to_string(chapter.get_ordernum());
 
     int pos_b = find_title(title);
-    int pos_e = find_title(contents.get_next(chapter).get_title());
-    std::ofstream outf(out_file_name);
+    Chapter next_chapter = contents.get_next(chapter);
+    int pos_e = find_title(next_chapter.get_title());
+    std::cout<<"next chapter in add_tags "<<next_chapter.get_title()<<"\n";
+    std::cout<<pos_b<<" "<<pos_e<<'\n';
+    std::ofstream outf("add_tag.txt");
+
     std::string str_input;
     std::ifstream inf(file_name);
     inf.seekg(pos_b);
     outf<<begin_title<<'\n';
     outf<<title<<'\n';
     std::getline(inf, str_input);
+    
     while (std::getline(inf, str_input) && inf.tellg() <= pos_e) {
-            outf<<str_input<<"\n";
+            outf<<str_input<<'\n';
         }
     outf<<end_title;    
 
@@ -202,16 +202,33 @@ vp  findLIS(const vp & source) { //ищем наибольшую возраст�
     return answer;
 }
 
+std::wstring ToLower(std::string s) {
+    
+    const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
+    
+    std::wofstream out("out_tolower.txt");
+    out.imbue(utf8_locale);
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    std::wstring w_sstring= converter.from_bytes(s);
+    //std::wstring w_sstring(s.begin(), s.end());
+    out<<w_sstring;
+    std::for_each(w_sstring.begin(), w_sstring.end(), [](auto& c) {
+        if (int(c)>=int(L'А') && int(c)<=int(L'Я')) {
+            c += 32;
+        }
+    });
+    out<<w_sstring<<'\n';
+    return w_sstring;
+}
 
 int levenshtein(std::string string_1, std::string string_2) { ///len(str_1)<len(str_2)
-
-    std::string str_1(string_1);
-    std::string str_2(string_2);
-
-    if (str_1.size() > str_2.size()) {
-        std::swap(str_1, str_2);
+    
+    if (string_1.size() > string_2.size()) {
+        std::swap(string_1, string_2);
     }
 
+    std::wstring str_1 = ToLower(string_1);
+    std::wstring str_2 = ToLower(string_2);
     int n = str_1.size();///min_size
     int m = str_2.size();///max_size
     int current_m[n+1];

@@ -108,7 +108,6 @@ Chapter& Contents::find(const std::string& name) {
         }
     }
     std::cout<<"have not this content";
-    exit;
 }
 
 Chapter& Contents::get_next(Chapter& chapter) {
