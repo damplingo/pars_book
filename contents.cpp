@@ -112,7 +112,7 @@ Chapter& Contents::find(const std::string& name) {
 
 Chapter& Contents::get_next(Chapter& chapter) {
     for (int i = chapter.get_ordernum(); i < size; ++i) {
-        if (contents[i].get_start() == chapter.get_end()) { //вернет первый следующий заголовок(работает и в ситуации конца раздела)
+        if (contents[i].get_start() == chapter.get_end() && contents[i].get_level() <= chapter.get_level()) { //вернет первый следующий заголовок(работает и в ситуации конца раздела)
             return contents[i];
         }
     }

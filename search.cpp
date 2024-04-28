@@ -14,7 +14,7 @@ bool isUint(const std::string& s){
 }
 
 
-Search::Search(const std::string& _file_name, const std::string& _contents_name): file_name(_file_name), contents_name(_contents_name) {
+Search::Search(const std::string& _file_name, const std::string& _contents_name, const std::string& _add_tag_file): file_name(_file_name), contents_name(_contents_name), add_tag_file_name(_add_tag_file) {
     contents = Contents(contents_name);
     std::ifstream inf(file_name);
     
@@ -25,14 +25,14 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name)
 
     std::ofstream outf("out_2.txt");
     std::string input_str;
-    int previous_page = 0;
-    bool after_contents = false;
+    int count_string = -1;//чтобы начиналась с 0 индексация
     while (std::getline(inf, input_str)){
-
+        text.push_back(input_str);
+        count_string += 1;
         try{
             if (isUint(input_str) && input_str!=" ") {
-                page_position.push_back({stoi(input_str), inf.tellg()});
-                previous_page = stoi(input_str);
+                //page_position.push_back({stoi(input_str), inf.tellg()});
+                page_position.push_back({stoi(input_str), count_string});
             }
         }
         catch(std::exception& ex) {
@@ -70,7 +70,7 @@ int Search::position_start(int page) {
     
     for (auto& i: page_position) {
         if (i.first == page) {
-            return i.second;//положение каретки
+            return i.second;//номер строки
         }
     }
     return 0;///***
@@ -79,14 +79,14 @@ int Search::position_start(int page) {
 int Search::end_this_page(int page) {
     for (int i = 0; i < page_position.size(); ++i) {
         if (page_position[i].first > page) {
-            return page_position[i].second;//положение каретки
+            return page_position[i].second;//номер строки
         }
     }
 
     return 0; //дошли до последней страницы книги. Достаточно просто будет ее прочитать
 }
 
-int Search::find_title(const std::string& title) {//вернет позицию с которой начинается строка с заголовком
+/*int Search::find_title(const std::string& title) {//вернет позицию с которой начинается строка с заголовком
     std::ifstream inf(file_name);
     Chapter this_chapter = contents.find(title);
     int start = position_start(this_chapter.get_start());
@@ -113,10 +113,31 @@ int Search::find_title(const std::string& title) {//вернет позицию 
 
     }
     return result;
+}*/
+
+int Search::find_title(const std::string& title) { //номер строки с заголовком
+    Chapter this_chapter = contents.find(title);
+    int start = position_start(this_chapter.get_start());
+    int end = end_this_page(this_chapter.get_start());
+
+    int min_levenshtein = INT_MAX;
+    int result; //номер строки
+    for (int i = start; i <= end; ++i) {
+        int this_levenshtein = levenshtein(text[i], title);
+        if (this_levenshtein < min_levenshtein) {
+            min_levenshtein = this_levenshtein;
+
+            result = i;
+        }
+    }
+    return result;
+
 }
 
 
-void Search::find_text(const std::string& name) {//продумать для последней главы отдельно
+
+
+/*void Search::find_text(const std::string& name) {//продумать для последней главы отдельно
     if (contents.exist(name)) {
         Chapter this_chapter = contents.find(name);
         std::ifstream inf(file_name);
@@ -137,21 +158,40 @@ void Search::find_text(const std::string& name) {//продумать для п�
 
     else std::cout<<"can not find\n";
     return;
+}*/
+
+void Search::find_text(const std::string& name) {
+    if (contents.exist(name)) {
+        Chapter this_chapter = contents.find(name);
+        Chapter next_chapter = contents.get_next(this_chapter);
+        int start_position = find_title(name);
+        int end_position = find_title(next_chapter.get_title());
+        std::cout<<next_chapter.get_title()<<'\n';
+        std::ofstream outf("out_cont.txt");
+
+        for (int i = start_position; i < end_position; ++i) {
+            outf<<text[i]<<'\n';
+        }
+    }
 }
 
 
-void Search::add_tags_for_title(const std::string& title) {// после тестирования передавать поток, а не имя
+/*void Search::add_tags_for_title(const std::string& title, std::fstream& outf) {// после тестирования передавать поток, а не имя
+    //std::fstream outf(this->add_tag_file_name);
     Chapter chapter = contents.find(title);
     std::string begin_title = "@#b" + std::to_string(chapter.get_ordernum());
     std::string end_title = "@#e"+ std::to_string(chapter.get_ordernum());
 
     int pos_b = find_title(title);
     Chapter next_chapter = contents.get_next(chapter);
-    int pos_e = find_title(next_chapter.get_title());
-    std::cout<<"next chapter in add_tags "<<next_chapter.get_title()<<"\n";
-    std::cout<<pos_b<<" "<<pos_e<<'\n';
-    std::ofstream outf("add_tag.txt");
-
+    int pos_e;
+    if (title != contents[contents.get_size()].get_title()) {
+        pos_e = find_title(next_chapter.get_title());
+    }
+    
+    else {
+        pos_e = INT_MAX;
+    }
     std::string str_input;
     std::ifstream inf(file_name);
     inf.seekg(pos_b);
@@ -161,9 +201,43 @@ void Search::add_tags_for_title(const std::string& title) {// после тес�
     
     while (std::getline(inf, str_input) && inf.tellg() <= pos_e) {
             outf<<str_input<<'\n';
+
         }
     outf<<end_title;    
 
+}*/
+
+void Search::add_tags_for_title(const std::string& title) {
+    int start = find_title(title);
+    Chapter chapter =contents.find(title);
+    std::string begin_title = "@#b" + std::to_string(chapter.get_ordernum());
+    std::string end_title = "@#e"+ std::to_string(chapter.get_ordernum());
+    Chapter next_chapter = contents.get_next(chapter);
+    
+    int end = find_title(next_chapter.get_title());
+    
+    text.insert(text.begin() + start, begin_title);
+    text.insert(text.begin() + end, end_title);
+    std::cout<<title<<'\n';
+    std::cout<<"beg "<<start<<'\n';
+    std::cout<<"end "<<end<<'\n';
+}
+
+
+void Search::add_tags_all() {
+    std::ofstream outf(add_tag_file_name);
+    std::cout<<text.size()<<'\n';
+    std::cout<<contents.get_size()<<'\n';
+    for (int i = 0; i < contents.get_size() - 1; ++i) {
+        add_tags_for_title(contents[i].get_title());
+        std::cout<<i<<'\n';
+    }
+
+    for (auto& str: text) {
+        outf<<str<<'\n';
+    }
+
+    
 }
 
 
@@ -211,7 +285,6 @@ std::wstring ToLower(std::string s) {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring w_sstring= converter.from_bytes(s);
     //std::wstring w_sstring(s.begin(), s.end());
-    out<<w_sstring;
     std::for_each(w_sstring.begin(), w_sstring.end(), [](auto& c) {
         if (int(c)>=int(L'А') && int(c)<=int(L'Я')) {
             c += 32;
