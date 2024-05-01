@@ -18,15 +18,16 @@ class Search {
         void find_text(const std::string& name);
         bool exist_page(int page);
         int end_this_page(int page);
-        int find_title(const std::string& title);
-        int find_title_by_order(Chapter& Chapter);
+        int find_title(Chapter& Chapter);
         //void add_tags_for_title(const std::string& title, std::fstream& outf);
+        void add_begin_tags();
         void add_tags_for_title(const std::string& title);
         void add_tags_all();
     private:
         std::vector<std::string> text;
         vp page_position;
         std::vector<std::string> begin_tags; //на i-м месте начала главы открывающий тэг, если строка не начало главы - пустота.
+        std::vector<std::vector<std::string>> end_tags;
         const std::string& contents_name; 
         Contents contents;//оглавление
         const std::string& file_name;

@@ -3,6 +3,7 @@
 #include <utility>
 #include <algorithm>
 #include <cctype>
+#include <stack>
 #include <iostream>
 #include <limits.h>
 #include <string>
@@ -16,6 +17,7 @@ bool isUint(const std::string& s){
 
 Search::Search(const std::string& _file_name, const std::string& _contents_name, const std::string& _add_tag_file): file_name(_file_name), contents_name(_contents_name), add_tag_file_name(_add_tag_file) {
     contents = Contents(contents_name);
+    
     std::ifstream inf(file_name);
     
     if (!inf) {
@@ -41,6 +43,9 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name,
     }
 
     page_position = findLIS(page_position);
+
+    begin_tags = std::vector<std::string>(text.size(), "");
+    end_tags = std::vector<std::vector<std::string>>(text.size(), {""});
     auto it = page_position.begin();
     while (it != page_position.end()) {
         outf<<it->first<<" "<<it->second<<"\n";
@@ -86,44 +91,45 @@ int Search::end_this_page(int page) {
     return 0; //дошли до последней страницы книги. Достаточно просто будет ее прочитать
 }
 
-/*int Search::find_title(const std::string& title) {//вернет позицию с которой начинается строка с заголовком
-    std::ifstream inf(file_name);
-    Chapter this_chapter = contents.find(title);
-    int start = position_start(this_chapter.get_start());
-    
-    int end = end_this_page(this_chapter.get_start());
-    std::string low_title(title);
 
+void Search::add_begin_tags(){
+    std::stack<Chapter> end_stack;
 
-    inf.seekg(start);
-    std::string str_input;
-    int result;
-    int current_position = start;
-    int min_levenshtein = INT_MAX;
-    while (std::getline(inf, str_input)) {
-        std::string low_str(str_input);
-        if (current_position >= end) break;
-        if (levenshtein(low_str, low_title) < min_levenshtein) {
-            min_levenshtein = levenshtein(low_str, low_title);
-    
-            result = current_position;
+    for (int i = 0; i < contents.get_size(); ++i) {
+        std::string tag = "@#b" + std::to_string(contents[i].get_ordernum()) + '\n';
+        int number = find_title(contents[i]);
+        begin_tags[number] = tag;
+        Chapter t;
+        if (!end_stack.empty()) t = end_stack.top();
+        while (t.get_level() >= contents[i].get_level() && !end_stack.empty()) {
+            std::string end_tag = "@#e" + std::to_string(t.get_ordernum()) + '\n';
+            end_tags[number].push_back(end_tag);
+            end_stack.pop();
+            if (!end_stack.empty()) t = end_stack.top();
         }
-        current_position = inf.tellg();
-        
-
+        end_stack.push(contents[i]);
     }
-    return result;
-}*/
+    Chapter t;//снимаем стэк в конце
+    if (!end_stack.empty()) t = end_stack.top();
+    while (t.get_level() >= contents[contents.get_size()].get_level() && !end_stack.empty()) {
+        std::string end_tag = "@#e" + std::to_string(t.get_ordernum()) + '\n';
+        end_tags[text.size()].push_back(end_tag);
+        end_stack.pop();
+        if (!end_stack.empty()) t = end_stack.top();
+    }
 
-int Search::find_title(const std::string& title) { //номер строки с заголовком
-    Chapter this_chapter = contents.find(title);
+}
+
+
+int Search::find_title(Chapter& this_chapter) { //номер строки с заголовком
+    //Chapter this_chapter = contents.find(title);
     int start = position_start(this_chapter.get_start());
     int end = end_this_page(this_chapter.get_start());
 
     int min_levenshtein = INT_MAX;
     int result; //номер строки
     for (int i = start; i <= end; ++i) {
-        int this_levenshtein = levenshtein(text[i], title);
+        int this_levenshtein = levenshtein(text[i], this_chapter.get_title());
         if (this_levenshtein < min_levenshtein) {
             min_levenshtein = this_levenshtein;
 
@@ -135,32 +141,7 @@ int Search::find_title(const std::string& title) { //номер строки с 
 }
 
 
-
-
-/*void Search::find_text(const std::string& name) {//продумать для последней главы отдельно
-    if (contents.exist(name)) {
-        Chapter this_chapter = contents.find(name);
-        std::ifstream inf(file_name);
-        Chapter next_chapter = contents.get_next(this_chapter);
-        int start_position = find_title(name);
-        int end_position = find_title(next_chapter.get_title());
-
-        std::ofstream outf("out_cont.txt");
-        std::string str_input;
-        inf.seekg(start_position);
-        std::getline(inf, str_input);
-        while (std::getline(inf, str_input) && inf.tellg() <= end_position) {
-            outf<<str_input<<"\n";
-            
-        }
-
-    }
-
-    else std::cout<<"can not find\n";
-    return;
-}*/
-
-void Search::find_text(const std::string& name) {
+/*void Search::find_text(const std::string& name) {
     if (contents.exist(name)) {
         Chapter this_chapter = contents.find(name);
         Chapter next_chapter = contents.get_next(this_chapter);
@@ -173,71 +154,25 @@ void Search::find_text(const std::string& name) {
             outf<<text[i]<<'\n';
         }
     }
-}
-
-
-/*void Search::add_tags_for_title(const std::string& title, std::fstream& outf) {// после тестирования передавать поток, а не имя
-    //std::fstream outf(this->add_tag_file_name);
-    Chapter chapter = contents.find(title);
-    std::string begin_title = "@#b" + std::to_string(chapter.get_ordernum());
-    std::string end_title = "@#e"+ std::to_string(chapter.get_ordernum());
-
-    int pos_b = find_title(title);
-    Chapter next_chapter = contents.get_next(chapter);
-    int pos_e;
-    if (title != contents[contents.get_size()].get_title()) {
-        pos_e = find_title(next_chapter.get_title());
-    }
-    
-    else {
-        pos_e = INT_MAX;
-    }
-    std::string str_input;
-    std::ifstream inf(file_name);
-    inf.seekg(pos_b);
-    outf<<begin_title<<'\n';
-    outf<<title<<'\n';
-    std::getline(inf, str_input);
-    
-    while (std::getline(inf, str_input) && inf.tellg() <= pos_e) {
-            outf<<str_input<<'\n';
-
-        }
-    outf<<end_title;    
-
 }*/
-
-void Search::add_tags_for_title(const std::string& title) {
-    int start = find_title(title);
-    Chapter chapter =contents.find(title);
-    std::string begin_title = "@#b" + std::to_string(chapter.get_ordernum());
-    std::string end_title = "@#e"+ std::to_string(chapter.get_ordernum());
-    Chapter next_chapter = contents.get_next(chapter);
-    
-    int end = find_title(next_chapter.get_title());
-    
-    text.insert(text.begin() + start, begin_title);
-    text.insert(text.begin() + end, end_title);
-    std::cout<<title<<'\n';
-    std::cout<<"beg "<<start<<'\n';
-    std::cout<<"end "<<end<<'\n';
-}
 
 
 void Search::add_tags_all() {
     std::ofstream outf(add_tag_file_name);
-    std::cout<<text.size()<<'\n';
-    std::cout<<contents.get_size()<<'\n';
-    for (int i = 0; i < contents.get_size() - 1; ++i) {
-        add_tags_for_title(contents[i].get_title());
-        std::cout<<i<<'\n';
+   
+    add_begin_tags();
+    for (int i = 0; i < text.size(); ++i) {
+        for (auto& t: end_tags[i]) {
+            outf<<t;
+        }
+        outf<<begin_tags[i];
+        outf<<text[i]<<'\n';
+
     }
 
-    for (auto& str: text) {
-        outf<<str<<'\n';
-    }
-
-    
+    for (auto& t: end_tags[text.size()]) {
+            outf<<t;
+        } 
 }
 
 
@@ -278,19 +213,18 @@ vp  findLIS(const vp & source) { //ищем наибольшую возраст�
 
 std::wstring ToLower(std::string s) {
     
-    const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
+    //const std::locale utf8_locale = std::locale(std::locale(), new std::codecvt_utf8<wchar_t>());
     
-    std::wofstream out("out_tolower.txt");
-    out.imbue(utf8_locale);
+    //std::wofstream out("out_tolower.txt");
+    //out.imbue(utf8_locale);
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     std::wstring w_sstring= converter.from_bytes(s);
-    //std::wstring w_sstring(s.begin(), s.end());
     std::for_each(w_sstring.begin(), w_sstring.end(), [](auto& c) {
         if (int(c)>=int(L'А') && int(c)<=int(L'Я')) {
             c += 32;
         }
     });
-    out<<w_sstring<<'\n';
+    //out<<w_sstring<<'\n';
     return w_sstring;
 }
 

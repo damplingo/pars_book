@@ -11,6 +11,7 @@ class Chapter {
     public:
         Chapter(int _ordernum, std::string _index, std::string _title, int start_page_,
         int end_page_, int level_);
+        Chapter() = default;
         int get_start();
         int get_end();
         int get_level();
@@ -37,6 +38,7 @@ class Contents {
         bool exist(const std::string& name);
         Chapter& find(const std::string& name);
         Chapter& get_next(Chapter& chapter);
+
     private:
         std::vector<Chapter> contents;
         std::string file_name;
