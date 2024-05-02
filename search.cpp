@@ -14,6 +14,38 @@ bool isUint(const std::string& s){
     return s.find_first_not_of("\n0123456789 ") == std::string::npos;//пробел тк цифры все с пробелом хранятся
 }
 
+bool is_tag(const std::string& str) {
+    std::string b = "@#b";
+    std::string e = "@#e";
+    if (str.substr(0, b.size()) == b || str.substr(0, e.size()) == e) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+void get_by_tag(int ordernum, const std::string& input, const std::string& output) {
+    std::ifstream inf(input);
+    std::string input_str;
+    std::ofstream outf(output);
+    std::string begin = "@#b" + std::to_string(ordernum);
+    std::string end = "@#e" + std::to_string(ordernum);
+    bool write = false;
+    while (std::getline(inf, input_str)) {
+        if (input_str == begin) {
+            write = true;
+        }
+        else if (input_str == end) {
+            write = false;
+            break;
+        }
+
+        else if (write == true && !is_tag(input_str)) {
+            outf<<input_str<<'\n';
+        }
+    }
+}
 
 Search::Search(const std::string& _file_name, const std::string& _contents_name, const std::string& _add_tag_file): file_name(_file_name), contents_name(_contents_name), add_tag_file_name(_add_tag_file) {
     contents = Contents(contents_name);
@@ -25,7 +57,6 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name,
         return;
     }
 
-    std::ofstream outf("out_2.txt");
     std::string input_str;
     int count_string = -1;//чтобы начиналась с 0 индексация
     while (std::getline(inf, input_str)){
@@ -47,10 +78,7 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name,
     begin_tags = std::vector<std::string>(text.size(), "");
     end_tags = std::vector<std::vector<std::string>>(text.size(), {""});
     auto it = page_position.begin();
-    while (it != page_position.end()) {
-        outf<<it->first<<" "<<it->second<<"\n";
-        ++it;
-    }
+    
 
 }
 
@@ -78,7 +106,7 @@ int Search::position_start(int page) {
             return i.second;//номер строки
         }
     }
-    return 0;///***
+    return 0;
 }
 
 int Search::end_this_page(int page) {
@@ -141,12 +169,12 @@ int Search::find_title(Chapter& this_chapter) { //номер строки с з�
 }
 
 
-/*void Search::find_text(const std::string& name) {
+void Search::find_text(const std::string& name) {
     if (contents.exist(name)) {
         Chapter this_chapter = contents.find(name);
         Chapter next_chapter = contents.get_next(this_chapter);
-        int start_position = find_title(name);
-        int end_position = find_title(next_chapter.get_title());
+        int start_position = find_title(this_chapter);
+        int end_position = find_title(next_chapter);
         std::cout<<next_chapter.get_title()<<'\n';
         std::ofstream outf("out_cont.txt");
 
@@ -154,7 +182,7 @@ int Search::find_title(Chapter& this_chapter) { //номер строки с з�
             outf<<text[i]<<'\n';
         }
     }
-}*/
+}
 
 
 void Search::add_tags_all() {

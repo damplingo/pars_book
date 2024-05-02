@@ -10,6 +10,8 @@ using vp = std::vector<std::pair<int, int>>;
 bool isUint(const std::string& s);
 vp findLIS(const vp& source);
 int levenshtein(std::string str_1, std::string str_2);
+void get_by_tag(int ordernum, const std::string& input, const std::string& output);
+bool is_tag(const std::string& str);
 
 class Search {
     public:
