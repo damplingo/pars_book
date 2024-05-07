@@ -1,8 +1,12 @@
 #include "contents.h"
 
-Chapter::Chapter(int _ordernum, std::string _index, std::string _title, int start_page_,
-        int end_page_, int level_): ordernum(_ordernum), index(_index), title(_title),
+Chapter::Chapter(int _id, int _ordernum, std::string _index, std::string _title, int start_page_,
+        int end_page_, int level_): id(_id), ordernum(_ordernum), index(_index), title(_title),
         start_page(start_page_), end_page(end_page_), level(level_) {}
+
+int Chapter::get_id() {
+    return id;
+}
 
 int Chapter::get_start() {
     return start_page;
@@ -38,10 +42,13 @@ Contents::Contents(std::string file_name_): file_name(file_name_) {
         std::istringstream str(input_str);
         std::string line;
         int count = 0;
-        int ordernum, start_page, end_page, level;
+        int id, ordernum, start_page, end_page, level;
         std::string title, index;
 
         while (std::getline(str, line, ';')) {
+            if (count == 0) {
+                id = stoi(line);
+            }
             if (count == 2) {
                 ordernum = stoi(line);
             }
@@ -69,7 +76,7 @@ Contents::Contents(std::string file_name_): file_name(file_name_) {
         }
 
         if (count != 0){
-                Chapter a(ordernum, index, title, start_page, end_page, level);
+                Chapter a(id, ordernum, index, title, start_page, end_page, level);
                 contents.push_back(a);
                 this->size += 1;
         }

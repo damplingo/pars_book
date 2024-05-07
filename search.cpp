@@ -25,13 +25,14 @@ bool is_tag(const std::string& str) {
     }
 }
 
-void get_by_tag(int ordernum, const std::string& input, const std::string& output) {
+std::string get_by_tag(int ordernum, const std::string& input, const std::string& output) {
     std::ifstream inf(input);
     std::string input_str;
     std::ofstream outf(output);
     std::string begin = "@#b" + std::to_string(ordernum);
     std::string end = "@#e" + std::to_string(ordernum);
     bool write = false;
+    std::string res;
     while (std::getline(inf, input_str)) {
         if (input_str == begin) {
             write = true;
@@ -43,13 +44,16 @@ void get_by_tag(int ordernum, const std::string& input, const std::string& outpu
 
         else if (write == true && !is_tag(input_str)) {
             outf<<input_str<<'\n';
+            res += input_str;
+            res += '\n';
         }
     }
+    return res;
 }
 
 Search::Search(const std::string& _file_name, const std::string& _contents_name, const std::string& _add_tag_file): file_name(_file_name), contents_name(_contents_name), add_tag_file_name(_add_tag_file) {
     contents = Contents(contents_name);
-    
+    contents_size = contents.get_size();
     std::ifstream inf(file_name);
     
     if (!inf) {
@@ -64,7 +68,6 @@ Search::Search(const std::string& _file_name, const std::string& _contents_name,
         count_string += 1;
         try{
             if (isUint(input_str) && input_str!=" ") {
-                //page_position.push_back({stoi(input_str), inf.tellg()});
                 page_position.push_back({stoi(input_str), count_string});
             }
         }
@@ -103,13 +106,13 @@ int Search::position_start(int page) {
     
     for (auto& i: page_position) {
         if (i.first == page) {
-            return i.second;//номер строки
+            return i.second;//номер строки, с которой начинается страница page
         }
     }
     return 0;
 }
 
-int Search::end_this_page(int page) {
+int Search::end_this_page(int page) {//начало следующей отмеченной страницы
     for (int i = 0; i < page_position.size(); ++i) {
         if (page_position[i].first > page) {
             return page_position[i].second;//номер строки
@@ -120,8 +123,8 @@ int Search::end_this_page(int page) {
 }
 
 
-void Search::add_begin_tags(){
-    std::stack<Chapter> end_stack;
+void Search::add_begin_tags(){ //добавление открывающих и закрывающих тэгов в вектора
+    std::stack<Chapter> end_stack;//начало одной главы - это конец одной или нескольких предыдущих
 
     for (int i = 0; i < contents.get_size(); ++i) {
         std::string tag = "@#b" + std::to_string(contents[i].get_ordernum()) + '\n';
@@ -149,8 +152,7 @@ void Search::add_begin_tags(){
 }
 
 
-int Search::find_title(Chapter& this_chapter) { //номер строки с заголовком
-    //Chapter this_chapter = contents.find(title);
+int Search::find_title(Chapter& this_chapter) { //возвращает номер строки с заголовком
     int start = position_start(this_chapter.get_start());
     int end = end_this_page(this_chapter.get_start());
 
@@ -169,7 +171,8 @@ int Search::find_title(Chapter& this_chapter) { //номер строки с з�
 }
 
 
-void Search::find_text(const std::string& name) {
+void Search::find_text(const std::string& name) {//глава по названию(была пунктом заданиия, но в данной реализации
+                                                //в чистом виде не используется)
     if (contents.exist(name)) {
         Chapter this_chapter = contents.find(name);
         Chapter next_chapter = contents.get_next(this_chapter);
@@ -185,26 +188,26 @@ void Search::find_text(const std::string& name) {
 }
 
 
-void Search::add_tags_all() {
+void Search::add_tags_all() { //вызов функции, добавляющей тэги add_begin_tags(), запись файла со вставлением тэгов
     std::ofstream outf(add_tag_file_name);
    
     add_begin_tags();
     for (int i = 0; i < text.size(); ++i) {
-        for (auto& t: end_tags[i]) {
+        for (auto& t: end_tags[i]) {//вывод завершающих тэгов перед строкой
             outf<<t;
         }
-        outf<<begin_tags[i];
+        outf<<begin_tags[i];//вывод открывающих тэгов перед строкой
         outf<<text[i]<<'\n';
 
     }
 
-    for (auto& t: end_tags[text.size()]) {
+    for (auto& t: end_tags[text.size()]) {//вывод закрываающих тэгов после текста
             outf<<t;
         } 
 }
 
 
-vp  findLIS(const vp & source) { //ищем наибольшую возрастающую подпоследовательность по номеру символа
+vp  findLIS(const vp & source) { //ищем наибольшую возрастающую подпоследовательность по значению строки обозначающей страницу
     int n = source.size();
     int prev[n-1];
     int d[n-1];
@@ -252,7 +255,6 @@ std::wstring ToLower(std::string s) {
             c += 32;
         }
     });
-    //out<<w_sstring<<'\n';
     return w_sstring;
 }
 
