@@ -13,7 +13,7 @@
 
 ///управление через аргументы командной строки
 ///0 filename.txt output.txt - разметить filename.txt и записать размеченный файл в output.txt
-///1 filename.txt - занести в базу глав filename.txt
+///1 filename.txt - занести в базу глав  из размеченного файла filename.txt
 
 int main(int argc, char** argv) {
 
